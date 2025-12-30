@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Working Platformer</title>
+<style>
+  body { margin:0; background:#87ceeb; display:flex; justify-content:center; align-items:flex-start; height:100vh; }
+  #game { position:relative; width:800px; height:400px; background:#87ceeb; border:2px solid #000; overflow:hidden; }
+  .player { position:absolute; width:40px; height:40px; background:red; }
+  .platform { position:absolute; width:150px; height:20px; background:green; }
+  .goal { position:absolute; width:40px; height:40px; background:gold; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="player" id="player"></div>
+  <div class="platform" style="top:360px; left:0;"></div>
+  <div class="platform" style="top:260px; left:200px;"></div>
+  <div class="platform" style="top:160px; left:450px;"></div>
+  <div class="goal" id="goal" style="top:120px; left:650px;"></div>
+</div>
+
+<script>
+const player = document.getElementById('player');
+const goal = document.getElementById('goal');
+const game = document.getElementById('game');
+
+const gravity = 0.8;
+const jumpPower = 15;
+let velocityY = 0;
+let onGround = false;
+
+const keys = {};
+const playerWidth = 40;
+const playerHeight = 40;
+
+// Get platforms relative to the game container
+const platforms = Array.from(document.getElementsByClassName('platform')).map(p => {
+  const rect = p.getBoundingClientRect();
+  const parentRect = game.getBoundingClientRect();
+  return {
+    x: rect.left - parentRect.left,
+    y: rect.top - parentRect.top,
+    width: rect.width,
+    height: rect.height
+  };
+});
+
+let playerPos = { x:50, y:320, width:playerWidth, height:playerHeight };
+
+document.addEventListener('keydown', e => keys[e.key] = true);
+document.addEventListener('keyup', e => keys[e.key] = false);
+
+function gameLoop() {
+  // Horizontal movement
+  if(keys['ArrowLeft']) playerPos.x -= 5;
+  if(keys['ArrowRight']) playerPos.x += 5;
+
+  // Gravity
+  velocityY += gravity;
+  playerPos.y += velocityY;
+  onGround = false;
+
+  // Platform collision
+  for(let p of platforms){
+    const playerBottom = playerPos.y + playerHeight;
+    const playerTop = playerPos.y;
+    const playerLeft = playerPos.x;
+    const playerRight = playerPos.x + playerWidth;
+
+    const platformTop = p.y;
+    const platformLeft = p.x;
+    const platformRight = p.x + p.width;
+
+    const horizontalOverlap = playerRight > platformLeft && playerLeft < platformRight;
+    const fallingOntoPlatform = velocityY >= 0 && playerBottom >= platformTop && playerTop < platformTop;
+
+    if(horizontalOverlap && fallingOntoPlatform){
+      playerPos.y = platformTop - playerHeight;
+      velocityY = 0;
+      onGround = true;
+    }
+  }
+
+  // Ground collision
+  if(playerPos.y + playerHeight > 400){
+    playerPos.y = 400 - playerHeight;
+    velocityY = 0;
+    onGround = true;
+  }
+
+  // Jump
+  if(keys['ArrowUp'] && onGround){
+    velocityY = -jumpPower;
+    onGround = false;
+  }
+
+  // Horizontal bounds
+  if(playerPos.x < 0) playerPos.x = 0;
+  if(playerPos.x + playerWidth > 800) playerPos.x = 800 - playerWidth;
+
+  // Update player
+  player.style.top = playerPos.y + 'px';
+  player.style.left = playerPos.x + 'px';
+
+  // Goal detection
+  const playerRect = player.getBoundingClientRect();
+  const goalRect = goal.getBoundingClientRect();
+  if(playerRect.left < goalRect.right &&
+     playerRect.right > goalRect.left &&
+     playerRect.top < goalRect.bottom &&
+     playerRect.bottom > goalRect.top){
+    alert("You reached the goal!");
+    playerPos.x = 50;
+    playerPos.y = 320;
+    velocityY = 0;
+  }
+
+  requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
+</script>
+</body>
+</html>
